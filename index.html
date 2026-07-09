@@ -879,7 +879,10 @@ async function renderDiscovery(){
     var cls='dpcard'+(p.status==='active'?' adis':p.status==='confirmed'?' ddone':'')+(selectedPainId===p.id?' sel':'');
     el.className=cls;
     var h=p.hypotheses||[],sc=h.filter(function(x){return x.selected}).length;
-    el.innerHTML='<div class="dpt">'+p.title+'</div><div class="dpp">'+p.persona+' \u00b7 '+(p.kr||'Sem KR')+'</div>'+
+    el.innerHTML='<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:4px">'+
+      '<div style="flex:1;min-width:0"><div class="dpt">'+p.title+'</div><div class="dpp">'+p.persona+' \u00b7 '+(p.kr||'Sem KR')+'</div></div>'+
+      '<button onclick="event.stopPropagation();confirmDelPain(\''+p.id+'\')" style="background:transparent;border:none;color:var(--t3);cursor:pointer;font-size:13px;padding:0 2px;flex-shrink:0;line-height:1" title="Excluir dor">\u00d7</button>'+
+      '</div>'+
       '<div class="dpm"><span class="dsp '+dSC(p.status)+'">'+dSL(p.status)+'</span>'+
       '<span style="font-size:8px;color:var(--t3)">'+h.length+' hip\u00f3t.</span>'+
       (sc?'<span style="font-size:8px;color:var(--it)">\u2714 Selecionada</span>':'')+
@@ -977,6 +980,7 @@ function renderDiscDetail(pid){
         (h.metric?'<div style="font-size:9px;color:var(--t3);margin-top:3px">\u2714 Valida com: '+h.metric+'</div>':'')+
         '<div class="ha">'+
           '<button class="ibtn" onclick="openHypEdit(\''+p.id+'\',\''+h.id+'\')">Editar</button>'+
+          '<button class="ibtn" style="color:var(--clt);border-color:#5A1A0A" onclick="confirmDelHyp(\''+p.id+'\',\''+h.id+'\')">&#10005; Excluir</button>'+
           (!h.selected?'<button class="ibtn prm" onclick="selHyp(\''+p.id+'\',\''+h.id+'\')">Selecionar</button>':'')+
           (!h.promotedRmId?'<button class="ibtn prm" onclick="promHypRM(\''+p.id+'\',\''+h.id+'\')">\u2192 Roadmap</button>':'<span style="font-size:9px;color:var(--tt)">\u2713 RM</span>')+
         '</div></div>';
@@ -1099,7 +1103,20 @@ function openPainEdit(id){var p=PAINS.find(function(x){return x.id===id});if(!p)
 function closePainModal(){document.getElementById('modal-pain').classList.remove('open');painEditId=null}
 function savePain(){var t=document.getElementById('pf-title').value.trim();if(!t){toast('Título obrigatório','err');return}var d={title:t,declaration:document.getElementById('pf-decl').value.trim(),persona:document.getElementById('pf-persona').value,kr:document.getElementById('pf-kr').value,source:document.getElementById('pf-source').value.trim(),status:document.getElementById('pf-status').value};if(painEditId){var idx=PAINS.findIndex(function(x){return x.id===painEditId});PAINS[idx]=Object.assign(PAINS[idx],d)}else{PAINS.push(Object.assign({id:'p'+Date.now(),createdAt:new Date().toISOString().slice(0,10),hypotheses:[],briefing:{},prototype:{},tests:[],decision:{}},d))}saveState();renderDiscovery();closePainModal();toast(painEditId?'Dor atualizada!':'Dor mapeada!')}
 function delPain(){if(!painEditId)return;if(!confirm('Excluir esta dor e hipóteses?'))return;PAINS=PAINS.filter(function(x){return x.id!==painEditId});if(selectedPainId===painEditId)selectedPainId=null;saveState();renderDiscovery();closePainModal();toast('Dor removida')}
-function openHypAdd(pid){currentPainIdForHyp=pid;hypEditId=null;document.getElementById('hyp-modal-t').textContent='Nova Hipótese';document.getElementById('hyp-btn-del').style.display='none';document.getElementById('hf-text').value='';document.getElementById('hf-metric').value='';['hf-impact','hf-conf','hf-ease'].forEach(function(id){document.getElementById(id).value=5});['hf-iv','hf-cv','hf-ev'].forEach(function(id){document.getElementById(id).textContent=5});document.getElementById('hf-tp').textContent=125;document.getElementById('hf-tp').style.color='var(--at)';document.getElementById('modal-hyp').classList.add('open')}
+function confirmDelPain(pid){
+  var p=PAINS.find(function(x){return x.id===pid});if(!p)return;
+  if(!confirm('Excluir a dor "'+p.title+'" e todas as '+p.hypotheses.length+' hipótese(s) vinculadas?\n\nEsta ação não pode ser desfeita.'))return;
+  PAINS=PAINS.filter(function(x){return x.id!==pid});
+  if(selectedPainId===pid){selectedPainId=null;}
+  saveState();renderDiscovery();toast('Dor excluída');
+}
+function confirmDelHyp(pid,hid){
+  var p=PAINS.find(function(x){return x.id===pid});if(!p)return;
+  var h=p.hypotheses.find(function(x){return x.id===hid});if(!h)return;
+  if(!confirm('Excluir a hipótese?\n\n"'+h.text.substring(0,80)+'..."\n\nEsta ação não pode ser desfeita.'))return;
+  p.hypotheses=p.hypotheses.filter(function(x){return x.id!==hid});
+  saveState();renderDiscovery();toast('Hipótese excluída');
+}currentPainIdForHyp=pid;hypEditId=null;document.getElementById('hyp-modal-t').textContent='Nova Hipótese';document.getElementById('hyp-btn-del').style.display='none';document.getElementById('hf-text').value='';document.getElementById('hf-metric').value='';['hf-impact','hf-conf','hf-ease'].forEach(function(id){document.getElementById(id).value=5});['hf-iv','hf-cv','hf-ev'].forEach(function(id){document.getElementById(id).textContent=5});document.getElementById('hf-tp').textContent=125;document.getElementById('hf-tp').style.color='var(--at)';document.getElementById('modal-hyp').classList.add('open')}
 function openHypEdit(pid,hid){currentPainIdForHyp=pid;var p=PAINS.find(function(x){return x.id===pid}),h=p&&p.hypotheses.find(function(x){return x.id===hid});if(!h)return;hypEditId=hid;document.getElementById('hyp-modal-t').textContent='Editar Hipótese';document.getElementById('hyp-btn-del').style.display='inline-flex';document.getElementById('hf-text').value=h.text;document.getElementById('hf-metric').value=h.metric||'';document.getElementById('modal-hyp').classList.add('open')}
 function closeHypModal(){document.getElementById('modal-hyp').classList.remove('open');hypEditId=null;currentPainIdForHyp=null}
 function updateHypSlider(){var i=parseInt(document.getElementById('hf-impact').value)||5,c=parseInt(document.getElementById('hf-conf').value)||5,e=parseInt(document.getElementById('hf-ease').value)||5;document.getElementById('hf-iv').textContent=i;document.getElementById('hf-cv').textContent=c;document.getElementById('hf-ev').textContent=e;var t=i*c*e;document.getElementById('hf-tp').textContent=t;document.getElementById('hf-tp').style.color=t>=500?'var(--tt)':t>=200?'var(--at)':'var(--clt)'}
