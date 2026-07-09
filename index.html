@@ -916,21 +916,24 @@ function renderDiscDetail(pid){
       '<button class="btn bi bsm" onclick="openHypAdd(\''+p.id+'\')">+ Adicionar</button></div>';
     var votes=ICE_VOTES_DATA||{};
     html+=hyps.length?hyps.map(function(h){
-      var t=h.impact*h.confidence*h.ease,pc=iPc(t);
       // Verificar quem já votou nesta hipótese
       var vComercial=Object.values(votes).filter(function(v){return v.hypId===h.id&&v.role==='comercial'});
       var vTI=Object.values(votes).filter(function(v){return v.hypId===h.id&&v.role==='ti'});
       var vProduto=Object.values(votes).filter(function(v){return v.hypId===h.id&&v.role==='produto'});
       var totalVotos=vComercial.length+vTI.length+vProduto.length;
       var todasAreas=vComercial.length>0&&vTI.length>0&&vProduto.length>0;
+      // ICE consolidado via votos
+      var iceConsolidado=null,avgI=null,avgC=null,avgE=null,pc2='';
+      if(todasAreas){
+        avgI=vComercial.reduce(function(a,v){return a+v.score},0)/vComercial.length;
+        avgC=vProduto.reduce(function(a,v){return a+v.score},0)/vProduto.length;
+        avgE=vTI.reduce(function(a,v){return a+v.score},0)/vTI.length;
+        iceConsolidado=Math.round(avgI*avgC*avgE);
+        pc2=iPc(iceConsolidado);
+      }
       // Badge de status de votação
       var votingStatus='';
       if(todasAreas){
-        var avgI=vComercial.reduce(function(a,v){return a+v.score},0)/vComercial.length;
-        var avgC=vProduto.reduce(function(a,v){return a+v.score},0)/vProduto.length;
-        var avgE=vTI.reduce(function(a,v){return a+v.score},0)/vTI.length;
-        var iceConsolidado=Math.round(avgI*avgC*avgE);
-        var pc2=iPc(iceConsolidado);
         votingStatus='<div style="background:var(--tl);border:1px solid var(--teal);border-radius:var(--rs);padding:6px 10px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px">'+
           '<div style="display:flex;gap:6px;flex-wrap:wrap">'+
             '<span style="font-size:9px;font-weight:700;color:var(--tt)">\u2713 Todas as \u00e1reas votaram</span>'+
@@ -939,7 +942,7 @@ function renderDiscDetail(pid){
             vTI.map(function(v){return '<span style="font-size:8px;padding:1px 6px;border-radius:20px;background:var(--al);color:var(--at)">TI: '+v.voter+' ('+v.score+')</span>'}).join('')+
           '</div>'+
           '<div style="display:flex;align-items:center;gap:6px">'+
-            '<span style="font-size:9px;color:var(--t2)">ICE consolidado:</span>'+
+            '<span style="font-size:9px;color:var(--t2)">ICE:</span>'+
             '<span class="'+pc2+'" style="font-size:14px;font-weight:700">'+iceConsolidado+'</span>'+
             '<button class="ibtn prm" onclick="applyVotedICE(\''+h.id+'\','+Math.round(avgI)+','+Math.round(avgC)+','+Math.round(avgE)+')" style="font-size:8px">\u2713 Aplicar</button>'+
           '</div>'+
@@ -961,12 +964,13 @@ function renderDiscDetail(pid){
           '</div></div>';
       }
       return '<div class="hc'+(h.selected?' sh3':'')+(h.promotedRmId?' ph3':'')+'">'+
-        '<div style="display:flex;justify-content:space-between;margin-bottom:6px">'+
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'+
           '<span style="font-size:9px;font-weight:700;color:var(--it)">'+(h.selected?'\u2714 SELECIONADA ':'')+
           (h.promotedRmId?'\u2197 No Roadmap ':'')+
           '</span>'+
-          (totalVotos?'<span class="'+pc+'" style="font-size:12px;font-weight:700">ICE '+(todasAreas?Math.round(h.impact*h.confidence*h.ease):t)+'</span>':
-           '<span style="font-size:9px;color:var(--t3)">ICE pendente</span>')+
+          (todasAreas?
+            '<span class="'+pc2+'" style="font-size:12px;font-weight:700">ICE '+iceConsolidado+'</span>':
+            '<span style="font-size:9px;color:var(--t3);background:var(--bg4);padding:2px 7px;border-radius:20px">\u23f3 ICE pendente</span>')+
         '</div>'+
         votingStatus+
         '<div class="ht">'+h.text+'</div>'+
@@ -1099,7 +1103,7 @@ function openHypAdd(pid){currentPainIdForHyp=pid;hypEditId=null;document.getElem
 function openHypEdit(pid,hid){currentPainIdForHyp=pid;var p=PAINS.find(function(x){return x.id===pid}),h=p&&p.hypotheses.find(function(x){return x.id===hid});if(!h)return;hypEditId=hid;document.getElementById('hyp-modal-t').textContent='Editar Hipótese';document.getElementById('hyp-btn-del').style.display='inline-flex';document.getElementById('hf-text').value=h.text;document.getElementById('hf-metric').value=h.metric||'';document.getElementById('modal-hyp').classList.add('open')}
 function closeHypModal(){document.getElementById('modal-hyp').classList.remove('open');hypEditId=null;currentPainIdForHyp=null}
 function updateHypSlider(){var i=parseInt(document.getElementById('hf-impact').value)||5,c=parseInt(document.getElementById('hf-conf').value)||5,e=parseInt(document.getElementById('hf-ease').value)||5;document.getElementById('hf-iv').textContent=i;document.getElementById('hf-cv').textContent=c;document.getElementById('hf-ev').textContent=e;var t=i*c*e;document.getElementById('hf-tp').textContent=t;document.getElementById('hf-tp').style.color=t>=500?'var(--tt)':t>=200?'var(--at)':'var(--clt)'}
-function saveHyp(){var tx=document.getElementById('hf-text').value.trim();if(!tx){toast('Hipótese obrigatória','err');return}var p=PAINS.find(function(x){return x.id===currentPainIdForHyp});if(!p)return;var d={text:tx,metric:document.getElementById('hf-metric').value.trim(),impact:parseInt(document.getElementById('hf-impact').value)||5,confidence:parseInt(document.getElementById('hf-conf').value)||5,ease:parseInt(document.getElementById('hf-ease').value)||5,selected:false,promotedRmId:null};if(hypEditId){var idx=p.hypotheses.findIndex(function(x){return x.id===hypEditId});d.selected=p.hypotheses[idx].selected;d.promotedRmId=p.hypotheses[idx].promotedRmId;p.hypotheses[idx]=Object.assign(p.hypotheses[idx],d)}else{p.hypotheses.push(Object.assign({id:'h'+Date.now()},d))}saveState();renderDiscovery();closeHypModal();toast(hypEditId?'Hipótese atualizada!':'Hipótese criada!')}
+function saveHyp(){var tx=document.getElementById('hf-text').value.trim();if(!tx){toast('Hipótese obrigatória','err');return}var p=PAINS.find(function(x){return x.id===currentPainIdForHyp});if(!p)return;var d={text:tx,metric:document.getElementById('hf-metric').value.trim(),impact:0,confidence:0,ease:0,selected:false,promotedRmId:null};if(hypEditId){var idx=p.hypotheses.findIndex(function(x){return x.id===hypEditId});d.selected=p.hypotheses[idx].selected;d.promotedRmId=p.hypotheses[idx].promotedRmId;p.hypotheses[idx]=Object.assign(p.hypotheses[idx],d)}else{p.hypotheses.push(Object.assign({id:'h'+Date.now()},d))}saveState();renderDiscovery();closeHypModal();toast(hypEditId?'Hipótese atualizada! Agora envie o link de votação para o time.':'Hipótese criada! Agora envie o link de votação para o time.')}
 function delHyp(){if(!hypEditId||!currentPainIdForHyp)return;var p=PAINS.find(function(x){return x.id===currentPainIdForHyp});if(!p)return;p.hypotheses=p.hypotheses.filter(function(h){return h.id!==hypEditId});saveState();renderDiscovery();closeHypModal();toast('Hipótese removida')}
 function selHyp(pid,hid){var p=PAINS.find(function(x){return x.id===pid});if(!p)return;p.hypotheses.forEach(function(h){h.selected=h.id===hid});saveState();renderDiscovery();toast('Hipótese selecionada!')}
 function promHypRM(pid,hid){var p=PAINS.find(function(x){return x.id===pid});if(!p)return;var h=p.hypotheses.find(function(x){return x.id===hid});if(!h)return;var title=h.text.substring(0,60)+(h.text.length>60?'\u2026':'');var nid='r'+Date.now();RM.push({id:nid,title:title,squad:'A definir',kr:p.kr||'',quarter:'Q2',status:'planned',impact:h.metric||'',iceId:null,discPainId:pid,discHypId:hid,cycleStep:'s3'});h.promotedRmId=nid;if(!h.selected){p.hypotheses.forEach(function(x){x.selected=false});h.selected=true;}saveState();renderDiscovery();renderRM();renderDash();toast('Hipótese promovida para o Roadmap!')}
