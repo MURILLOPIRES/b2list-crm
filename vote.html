@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>B2List — Votação ICE Score</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0D1B2A;--bg2:#112233;--bg3:#162840;--bg4:#1E3450;
+  --teal:#1D9E75;--tl:#0A2A1A;--tt:#5DCAA5;
+  --purple:#7C6FE0;--pt:#AFA9EC;
+  --amber:#E09A20;--at:#FAC775;
+  --coral:#E05C3A;--clt:#F0997B;
+  --indigo:#5B4FD4;--il:#18144A;--it:#9B93F0;
+  --text:#E2EAF4;--t2:#94A3B8;--t3:#52677E;
+  --border:#1E3450;--b2:#243D56;
+  --card:#112233;--r:10px;--rs:6px;
+  font-family:system-ui,-apple-system,sans-serif;font-size:13px;line-height:1.5
+}
+body{background:var(--bg);color:var(--text);min-height:100vh;padding:0}
+.header{background:var(--bg2);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between}
+.logo{font-size:16px;font-weight:700;color:var(--teal)}
+.logo-sub{font-size:10px;color:var(--t3);margin-top:1px}
+.container{max-width:720px;margin:0 auto;padding:24px 16px}
+.welcome{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:18px 20px;margin-bottom:20px}
+.welcome-title{font-size:15px;font-weight:600;margin-bottom:6px}
+.welcome-sub{font-size:11px;color:var(--t2);line-height:1.6}
+.role-selector{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0}
+.role-card{background:var(--bg3);border:2px solid var(--border);border-radius:var(--r);padding:14px;text-align:center;cursor:pointer;transition:all .15s}
+.role-card:hover{border-color:var(--b2)}
+.role-card.selected{border-color:var(--teal);background:var(--tl)}
+.role-icon{font-size:22px;margin-bottom:6px}
+.role-name{font-size:11px;font-weight:600;color:var(--text);margin-bottom:2px}
+.role-desc{font-size:9px;color:var(--t3)}
+.role-dim{font-size:10px;font-weight:700;margin-top:5px;padding:2px 8px;border-radius:20px;display:inline-block}
+.name-field{margin-top:12px}
+.fl{font-size:10px;color:var(--t2);margin-bottom:3px;display:block;font-weight:500}
+.fi{width:100%;background:var(--bg3);border:1px solid var(--b2);border-radius:var(--rs);color:var(--text);font-size:11px;padding:7px 10px}
+.fi:focus{outline:none;border-color:var(--teal)}
+.btn{display:inline-flex;align-items:center;gap:4px;padding:8px 16px;border-radius:var(--rs);border:none;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s}
+.btn-p{background:var(--teal);color:#fff}.btn-p:hover{opacity:.88}
+.btn-g{background:transparent;color:var(--t2);border:1px solid var(--b2)}.btn-g:hover{background:var(--bg3);color:var(--text)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.step{display:none}.step.active{display:block}
+/* HIPOTESES */
+.pain-section{margin-bottom:24px}
+.pain-title{font-size:12px;font-weight:700;color:var(--it);margin-bottom:4px;display:flex;align-items:center;gap:6px}
+.pain-decl{font-size:10px;color:var(--t3);margin-bottom:12px;line-height:1.5;padding:6px 10px;background:var(--bg3);border-radius:var(--rs);border-left:3px solid var(--indigo)}
+.hyp-vote{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;margin-bottom:10px}
+.hyp-text{font-size:11px;color:var(--text);line-height:1.5;margin-bottom:12px}
+.hyp-metric{font-size:9px;color:var(--t3);margin-bottom:12px}
+.score-label{font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px}
+.slider-row{display:flex;align-items:center;gap:10px}
+.slider{flex:1;accent-color:var(--teal);cursor:pointer}
+.slider-val{font-size:16px;font-weight:700;min-width:28px;text-align:center}
+.scale-labels{display:flex;justify-content:space-between;font-size:8px;color:var(--t3);margin-top:2px}
+.already-voted{background:var(--tl);border:1px solid var(--teal);border-radius:var(--rs);padding:10px 12px;font-size:10px;color:var(--tt);margin-bottom:12px}
+/* PROGRESS */
+.progress-bar{height:4px;background:var(--bg4);border-radius:2px;margin-bottom:20px}
+.progress-fill{height:4px;background:var(--teal);border-radius:2px;transition:width .3s}
+.step-indicator{font-size:10px;color:var(--t3);margin-bottom:8px}
+/* SUCCESS */
+.success-box{background:var(--tl);border:1px solid var(--teal);border-radius:var(--r);padding:24px;text-align:center;margin-top:20px}
+.success-icon{font-size:36px;margin-bottom:10px}
+.success-title{font-size:15px;font-weight:700;color:var(--tt);margin-bottom:6px}
+.success-sub{font-size:11px;color:var(--t2);line-height:1.6}
+/* LOADER */
+.loader{position:fixed;inset:0;background:#0D1B2Aee;z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px}
+.spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--teal);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loader-msg{font-size:12px;color:var(--t2)}
+.toast{position:fixed;bottom:20px;right:20px;padding:9px 14px;border-radius:var(--r);font-size:11px;font-weight:500;opacity:0;transform:translateY(6px);transition:all .22s;z-index:200;pointer-events:none}
+.toast.show{opacity:1;transform:translateY(0)}
+.nav-foot{display:flex;justify-content:space-between;align-items:center;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)}
+.dim-info{background:var(--bg3);border-radius:var(--rs);padding:10px 14px;margin-bottom:16px;font-size:10px;color:var(--t2);line-height:1.6;border-left:3px solid}
+</style>
+</head>
+<body>
+<div class="header">
+  <div><div class="logo">B2List</div><div class="logo-sub">Votação ICE Score — Discovery Estratégico</div></div>
+  <div id="user-badge" style="font-size:10px;color:var(--t3)"></div>
+</div>
+
+<div id="loader" class="loader" style="display:none">
+  <div class="spinner"></div>
+  <div class="loader-msg" id="loader-msg">Carregando...</div>
+</div>
+
+<div class="container">
+
+  <!-- STEP 1: Identificação -->
+  <div id="step-1" class="step active">
+    <div class="welcome">
+      <div class="welcome-title">Votação ICE Score — B2List</div>
+      <div class="welcome-sub">
+        Olá! Murillo precisa da sua avaliação sobre as hipóteses de produto do Discovery Estratégico.<br>
+        Selecione sua área e preencha apenas a dimensão do ICE que corresponde ao seu papel.<br>
+        Leva menos de 5 minutos.
+      </div>
+    </div>
+
+    <div style="font-size:11px;font-weight:600;color:var(--text);margin-bottom:10px">Qual é a sua área?</div>
+    <div class="role-selector">
+      <div class="role-card" onclick="selectRole('comercial',this)">
+        <div class="role-icon">📈</div>
+        <div class="role-name">Comercial / CS</div>
+        <div class="role-desc">Impacto em receita e retenção</div>
+        <div class="role-dim" style="background:var(--tl);color:var(--tt)">Preenche: Impact</div>
+      </div>
+      <div class="role-card" onclick="selectRole('ti',this)">
+        <div class="role-icon">⚙️</div>
+        <div class="role-name">TI / Engenharia</div>
+        <div class="role-desc">Complexidade de implementação</div>
+        <div class="role-dim" style="background:var(--al);color:var(--at)">Preenche: Ease</div>
+      </div>
+      <div class="role-card" onclick="selectRole('produto',this)">
+        <div class="role-icon">🎯</div>
+        <div class="role-name">Produto / CPO</div>
+        <div class="role-desc">Certeza de que resolve a dor</div>
+        <div class="role-dim" style="background:var(--il);color:var(--it)">Preenche: Confidence</div>
+      </div>
+    </div>
+
+    <div class="name-field">
+      <label class="fl">Seu nome *</label>
+      <input class="fi" id="voter-name" placeholder="Ex: Heloisy, Gabriel Paulo, Raphaela...">
+    </div>
+
+    <div class="nav-foot">
+      <span style="font-size:10px;color:var(--t3)">Passo 1 de 2</span>
+      <button class="btn btn-p" onclick="goToVoting()" id="btn-next" disabled>Próximo →</button>
+    </div>
+  </div>
+
+  <!-- STEP 2: Votação -->
+  <div id="step-2" class="step">
+    <div id="dim-info" class="dim-info"></div>
+    <div id="voting-content"></div>
+    <div class="nav-foot">
+      <button class="btn btn-g" onclick="goStep(1)">← Voltar</button>
+      <button class="btn btn-p" onclick="submitVotes()" id="btn-submit">Enviar avaliação ✓</button>
+    </div>
+  </div>
+
+  <!-- STEP 3: Sucesso -->
+  <div id="step-3" class="step">
+    <div class="success-box">
+      <div class="success-icon">✅</div>
+      <div class="success-title">Avaliação enviada!</div>
+      <div class="success-sub">
+        Obrigado pela sua contribuição.<br>
+        Murillo vai consolidar todas as notas e calcular o ICE Score final de cada hipótese.<br><br>
+        Você pode fechar esta página.
+      </div>
+    </div>
+  </div>
+
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+var SB_URL='https://icusafnczlmjjzqivjhd.supabase.co';
+var SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImljdXNhZm5jemxtamp6cWl2amhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM1OTI4MTgsImV4cCI6MjA5OTE2ODgxOH0.isIp68uPa5B-3hGbo8sTuWsEPqAyVldHtmpCcAIT8mM';
+
+var currentRole=null,voterName='',PAINS=[],ICE_VOTES={};
+
+async function sbGet(key){
+  try{
+    var r=await fetch(SB_URL+'/rest/v1/crm_data?key=eq.'+key+'&select=value',{
+      headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}
+    });
+    var d=await r.json();
+    return d&&d.length?d[0].value:null;
+  }catch(e){return null}
+}
+async function sbSet(key,value){
+  await fetch(SB_URL+'/rest/v1/crm_data',{
+    method:'POST',
+    headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},
+    body:JSON.stringify({key:key,value:value,updated_at:new Date().toISOString()})
+  });
+}
+
+function showLoader(msg){document.getElementById('loader').style.display='flex';document.getElementById('loader-msg').textContent=msg||'Aguarde...'}
+function hideLoader(){document.getElementById('loader').style.display='none'}
+function toast(msg,type){var t=document.getElementById('toast');t.textContent=msg;t.style.background=type==='err'?'#E05C3A':'#1D9E75';t.classList.add('show');setTimeout(function(){t.classList.remove('show')},2800)}
+
+function selectRole(role,el){
+  currentRole=role;
+  document.querySelectorAll('.role-card').forEach(function(c){c.classList.remove('selected')});
+  el.classList.add('selected');
+  checkStep1();
+}
+document.getElementById('voter-name').addEventListener('input',checkStep1);
+function checkStep1(){
+  var ok=currentRole&&document.getElementById('voter-name').value.trim().length>1;
+  document.getElementById('btn-next').disabled=!ok;
+}
+
+async function goToVoting(){
+  voterName=document.getElementById('voter-name').value.trim();
+  showLoader('Carregando hipóteses do Discovery...');
+  var pains=await sbGet('b2_pains');
+  var votes=await sbGet('b2_ice_votes');
+  hideLoader();
+  PAINS=pains||[];
+  ICE_VOTES=votes||{};
+
+  // Info da dimensão
+  var dimInfo={
+    comercial:{label:'Impact (Impacto Comercial)',color:'var(--teal)',bg:'var(--tl)',desc:'Avalie o impacto esperado de cada hipótese em receita, retenção de clientes, expansão de conta ou aquisição de novos distribuidores. Escala: 1 = impacto mínimo, 10 = transforma o negócio.'},
+    ti:{label:'Ease (Facilidade Técnica)',color:'var(--amber)',bg:'var(--al)',desc:'Avalie a facilidade de implementação de cada hipótese. 10 = muito simples, poucos dias; 1 = altamente complexo, múltiplos sprints, alto risco. Considere a capacidade atual do time.'},
+    produto:{label:'Confidence (Certeza de Produto)',color:'var(--indigo)',bg:'var(--il)',desc:'Avalie a certeza de que a hipótese resolve a dor declarada. Baseie-se em dados de uso, feedbacks e evidências de discovery. 10 = certeza absoluta; 1 = muita incerteza.'}
+  }[currentRole];
+
+  document.getElementById('dim-info').style.borderLeftColor=dimInfo.color;
+  document.getElementById('dim-info').innerHTML='<strong style="color:'+dimInfo.color+'">Você está preenchendo: '+dimInfo.label+'</strong><br>'+dimInfo.desc;
+
+  // Filtrar dores com hipóteses ativas
+  var activePains=PAINS.filter(function(p){return p.hypotheses&&p.hypotheses.length>0&&p.status!=='refuted'});
+
+  if(!activePains.length){
+    document.getElementById('voting-content').innerHTML='<div style="color:var(--t3);padding:20px;text-align:center">Nenhuma hipótese disponível para avaliação no momento.</div>';
+    goStep(2);return;
+  }
+
+  var html='';
+  activePains.forEach(function(pain){
+    var hyps=pain.hypotheses.filter(function(h){return h.selected||pain.status==='active'||pain.status==='testing'||pain.status==='prototyping'});
+    if(!hyps.length)hyps=pain.hypotheses;
+    html+='<div class="pain-section">';
+    html+='<div class="pain-title"><span style="font-size:14px">⬡</span> '+pain.title+'</div>';
+    html+='<div class="pain-decl">'+pain.declaration+'</div>';
+    hyps.forEach(function(h){
+      var voteKey=currentRole+'_'+voterName.replace(/\s/g,'_')+'_'+h.id;
+      var existing=ICE_VOTES[voteKey];
+      var val=existing?existing.score:5;
+      html+='<div class="hyp-vote" id="hyp-'+h.id+'">';
+      if(existing){
+        html+='<div class="already-voted">✓ Você já avaliou esta hipótese com nota <strong>'+existing.score+'</strong> em '+existing.date+'. Pode alterar abaixo.</div>';
+      }
+      html+='<div class="hyp-text">'+h.text+'</div>';
+      if(h.metric)html+='<div class="hyp-metric">✓ Valida com: '+h.metric+'</div>';
+      html+='<div class="score-label" style="color:'+dimInfo.color+'">Sua nota para '+dimInfo.label.split(' (')[0]+'</div>';
+      html+='<div class="slider-row">';
+      html+='<span style="font-size:10px;color:var(--t3)">1</span>';
+      html+='<input type="range" class="slider" id="sl-'+h.id+'" min="1" max="10" value="'+val+'" oninput="updateSlider(\''+h.id+'\',this.value)" style="accent-color:'+dimInfo.color+'">';
+      html+='<span style="font-size:10px;color:var(--t3)">10</span>';
+      html+='<span class="slider-val" id="sv-'+h.id+'" style="color:'+dimInfo.color+'">'+val+'</span>';
+      html+='</div>';
+      html+='<div class="scale-labels"><span>Muito difícil/sem impacto</span><span>Fácil/alto impacto</span></div>';
+      html+='</div>';
+    });
+    html+='</div>';
+  });
+  document.getElementById('voting-content').innerHTML=html;
+  goStep(2);
+}
+
+function updateSlider(hid,val){document.getElementById('sv-'+hid).textContent=val}
+
+async function submitVotes(){
+  showLoader('Salvando sua avaliação...');
+  var votes=await sbGet('b2_ice_votes')||{};
+  var today=new Date().toISOString().slice(0,10);
+
+  // Coletar todos os sliders
+  document.querySelectorAll('[id^="sl-"]').forEach(function(sl){
+    var hid=sl.id.replace('sl-','');
+    var voteKey=currentRole+'_'+voterName.replace(/\s/g,'_')+'_'+hid;
+    votes[voteKey]={
+      voter:voterName,role:currentRole,hypId:hid,
+      score:parseInt(sl.value),date:today
+    };
+  });
+
+  await sbSet('b2_ice_votes',votes);
+  hideLoader();
+  goStep(3);
+  toast('Avaliação enviada com sucesso!');
+}
+
+function goStep(n){
+  document.querySelectorAll('.step').forEach(function(s){s.classList.remove('active')});
+  document.getElementById('step-'+n).classList.add('active');
+}
+</script>
+</body>
+</html>
