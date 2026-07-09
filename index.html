@@ -868,7 +868,10 @@ function delKr(oid,kid){
   o.krs=o.krs.filter(function(x){return x.id!==kid});
   saveState();renderOKRs();renderDash();toast('KR removido');
 }
-function renderDiscovery(){
+async function renderDiscovery(){
+  // Carregar votos ICE em background para mostrar status nas hipóteses
+  var votes=await sbGet('b2_ice_votes');
+  ICE_VOTES_DATA=votes||{};
   var col=document.getElementById('disc-pain-list');
   Array.from(col.querySelectorAll('.dpcard,.disc-add-btn')).forEach(function(e){e.remove()});
   PAINS.forEach(function(p){
@@ -911,15 +914,63 @@ function renderDiscDetail(pid){
     html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'+
       '<span style="font-size:10px;font-weight:600;color:var(--text)">'+hyps.length+' hip\u00f3tese(s)</span>'+
       '<button class="btn bi bsm" onclick="openHypAdd(\''+p.id+'\')">+ Adicionar</button></div>';
+    var votes=ICE_VOTES_DATA||{};
     html+=hyps.length?hyps.map(function(h){
       var t=h.impact*h.confidence*h.ease,pc=iPc(t);
+      // Verificar quem já votou nesta hipótese
+      var vComercial=Object.values(votes).filter(function(v){return v.hypId===h.id&&v.role==='comercial'});
+      var vTI=Object.values(votes).filter(function(v){return v.hypId===h.id&&v.role==='ti'});
+      var vProduto=Object.values(votes).filter(function(v){return v.hypId===h.id&&v.role==='produto'});
+      var totalVotos=vComercial.length+vTI.length+vProduto.length;
+      var todasAreas=vComercial.length>0&&vTI.length>0&&vProduto.length>0;
+      // Badge de status de votação
+      var votingStatus='';
+      if(todasAreas){
+        var avgI=vComercial.reduce(function(a,v){return a+v.score},0)/vComercial.length;
+        var avgC=vProduto.reduce(function(a,v){return a+v.score},0)/vProduto.length;
+        var avgE=vTI.reduce(function(a,v){return a+v.score},0)/vTI.length;
+        var iceConsolidado=Math.round(avgI*avgC*avgE);
+        var pc2=iPc(iceConsolidado);
+        votingStatus='<div style="background:var(--tl);border:1px solid var(--teal);border-radius:var(--rs);padding:6px 10px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px">'+
+          '<div style="display:flex;gap:6px;flex-wrap:wrap">'+
+            '<span style="font-size:9px;font-weight:700;color:var(--tt)">\u2713 Todas as \u00e1reas votaram</span>'+
+            vComercial.map(function(v){return '<span style="font-size:8px;padding:1px 6px;border-radius:20px;background:#1A3A2A;color:var(--tt)">CS: '+v.voter+' ('+v.score+')</span>'}).join('')+
+            vProduto.map(function(v){return '<span style="font-size:8px;padding:1px 6px;border-radius:20px;background:var(--il);color:var(--it)">Prod: '+v.voter+' ('+v.score+')</span>'}).join('')+
+            vTI.map(function(v){return '<span style="font-size:8px;padding:1px 6px;border-radius:20px;background:var(--al);color:var(--at)">TI: '+v.voter+' ('+v.score+')</span>'}).join('')+
+          '</div>'+
+          '<div style="display:flex;align-items:center;gap:6px">'+
+            '<span style="font-size:9px;color:var(--t2)">ICE consolidado:</span>'+
+            '<span class="'+pc2+'" style="font-size:14px;font-weight:700">'+iceConsolidado+'</span>'+
+            '<button class="ibtn prm" onclick="applyVotedICE(\''+h.id+'\','+Math.round(avgI)+','+Math.round(avgC)+','+Math.round(avgE)+')" style="font-size:8px">\u2713 Aplicar</button>'+
+          '</div>'+
+        '</div>';
+      } else {
+        var pendentes=[];
+        if(!vComercial.length)pendentes.push('<span style="font-size:8px;padding:2px 7px;border-radius:20px;background:#2A1A0A;color:#FAC775">CS/Comercial</span>');
+        if(!vProduto.length)pendentes.push('<span style="font-size:8px;padding:2px 7px;border-radius:20px;background:var(--il);color:var(--it)">Produto/CPO</span>');
+        if(!vTI.length)pendentes.push('<span style="font-size:8px;padding:2px 7px;border-radius:20px;background:#1A1A2A;color:#AFA9EC">TI/Eng.</span>');
+        var recebidas=[];
+        if(vComercial.length)recebidas.push('<span style="font-size:8px;padding:2px 7px;border-radius:20px;background:#1A3A2A;color:var(--tt)">\u2713 CS ('+vComercial.map(function(v){return v.voter+':'+v.score}).join(',')+')</span>');
+        if(vProduto.length)recebidas.push('<span style="font-size:8px;padding:2px 7px;border-radius:20px;background:var(--il);color:var(--it)">\u2713 Prod ('+vProduto.map(function(v){return v.voter+':'+v.score}).join(',')+')</span>');
+        if(vTI.length)recebidas.push('<span style="font-size:8px;padding:2px 7px;border-radius:20px;background:var(--al);color:var(--at)">\u2713 TI ('+vTI.map(function(v){return v.voter+':'+v.score}).join(',')+')</span>');
+        votingStatus='<div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--rs);padding:7px 10px;margin-bottom:8px">'+
+          (recebidas.length?'<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:4px">'+recebidas.join('')+'</div>':'')+
+          '<div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">'+
+            '<span style="font-size:8px;color:var(--t3)">\u23f3 Aguardando:</span>'+
+            pendentes.join('')+
+          '</div></div>';
+      }
       return '<div class="hc'+(h.selected?' sh3':'')+(h.promotedRmId?' ph3':'')+'">'+
-        '<div style="display:flex;justify-content:space-between;margin-bottom:3px">'+
+        '<div style="display:flex;justify-content:space-between;margin-bottom:6px">'+
           '<span style="font-size:9px;font-weight:700;color:var(--it)">'+(h.selected?'\u2714 SELECIONADA ':'')+
           (h.promotedRmId?'\u2197 No Roadmap ':'')+
-          '</span><span class="'+pc+'" style="font-size:12px;font-weight:700">ICE '+t+'</span></div>'+
+          '</span>'+
+          (totalVotos?'<span class="'+pc+'" style="font-size:12px;font-weight:700">ICE '+(todasAreas?Math.round(h.impact*h.confidence*h.ease):t)+'</span>':
+           '<span style="font-size:9px;color:var(--t3)">ICE pendente</span>')+
+        '</div>'+
+        votingStatus+
         '<div class="ht">'+h.text+'</div>'+
-        (h.metric?'<div style="font-size:9px;color:var(--t3)">\u2714 Valida com: '+h.metric+'</div>':'')+
+        (h.metric?'<div style="font-size:9px;color:var(--t3);margin-top:3px">\u2714 Valida com: '+h.metric+'</div>':'')+
         '<div class="ha">'+
           '<button class="ibtn" onclick="openHypEdit(\''+p.id+'\',\''+h.id+'\')">Editar</button>'+
           (!h.selected?'<button class="ibtn prm" onclick="selHyp(\''+p.id+'\',\''+h.id+'\')">Selecionar</button>':'')+
